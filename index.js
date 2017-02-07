@@ -4,8 +4,9 @@ var ncp = require('ncp').ncp;
 var async = require('async');
 var merge = require('merge');
 var findpath = require('nw').findpath;
+var copy = require('copy')
 
-var NodeWebkitBrowser = function(baseBrowserDecorator, args) {
+var NodeWebkitBrowser = function(baseBrowserDecorator, args,config) {
   baseBrowserDecorator(this);
 
   var customOptions = args.options || {};
@@ -23,16 +24,28 @@ var NodeWebkitBrowser = function(baseBrowserDecorator, args) {
 
     async.auto({
       'directory': function(callback) {
-        ncp(SOURCE_PATH, STATIC_PATH, callback);
+        ncp(SOURCE_PATH, STATIC_PATH,callback);
       },
-      'index.html:read': ['directory', function(callback) {
+      'copy':function(callback){
+        var items = config.copy.items;
+        var len = config.copy.items.length;
+        var base = config.copy.base;
+        for( var i=0;i<config.copy.items.length;i++){
+          copy(base+items[i]+'/**/*',STATIC_PATH+items[i],function(){
+            if( --len == 0 ){
+              callback();
+            }
+          })
+        }
+      },
+      'index.html:read': ['directory','copy', function(callback) {
         fs.readFile(INDEX_HTML, callback);
       }],
       'index.html:write': ['index.html:read', function(callback, results) {
         var content = results['index.html:read'].toString().replace('%URL%', url);
         fs.writeFile(INDEX_HTML, content, callback);
       }],
-      'package.json:read': ['directory', function(callback) {
+      'package.json:read': ['directory','copy', function(callback) {
         fs.readFile(PACKAGE_JSON, callback);
       }],
       'package.json:write': ['package.json:read', function(callback, results) {
@@ -49,7 +62,7 @@ var NodeWebkitBrowser = function(baseBrowserDecorator, args) {
 };
 
 NodeWebkitBrowser.prototype = {
-  name: 'node-webkit',
+  name: 'NW.js',
 
   DEFAULT_CMD: {
     linux: findpath(),
@@ -60,9 +73,9 @@ NodeWebkitBrowser.prototype = {
   ENV_CMD: 'NODEWEBKIT_BIN'
 };
 
-NodeWebkitBrowser.$inject = ['baseBrowserDecorator', 'args'];
+NodeWebkitBrowser.$inject = ['baseBrowserDecorator', 'args','config.NWJSConfig'];
 
 // PUBLISH DI MODULE
 module.exports = {
-  'launcher:NodeWebkit': ['type', NodeWebkitBrowser]
+  'launcher:NWJS': ['type', NodeWebkitBrowser]
 };
