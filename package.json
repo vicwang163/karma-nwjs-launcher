@@ -16,6 +16,7 @@
     "node-webkit"
   ],
   "dependencies": {
+    "copy": "^0.3.0",
     "async": "~0.2.10",
     "merge": "~1.1.2",
     "ncp": "~0.5.0",
